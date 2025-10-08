@@ -9,7 +9,15 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Dart Mappable Parser UI')),
+      appBar: AppBar(
+        title: Row(
+          children: [
+            const Icon(Icons.generating_tokens),
+            const SizedBox(width: 8),
+            const Text('Dart Mappable Data Class Generator'),
+          ],
+        ),
+      ),
       body: Column(
         children: [
           const TopPanel(),

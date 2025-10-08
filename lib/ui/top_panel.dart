@@ -36,7 +36,8 @@ class _TopPanelState extends ConsumerState<TopPanel> {
     if (_classController.text != model.className) {
       _classController.text = model.className;
       _classController.selection = TextSelection.fromPosition(
-          TextPosition(offset: _classController.text.length));
+        TextPosition(offset: _classController.text.length),
+      );
     }
 
     return Container(
@@ -51,7 +52,13 @@ class _TopPanelState extends ConsumerState<TopPanel> {
             width: 180,
             child: TextField(
               controller: _classController,
-              decoration: const InputDecoration(labelText: 'Class Name'),
+              decoration: InputDecoration(
+                labelText: 'Class Name',
+                labelStyle: TextStyle(fontWeight: FontWeight.bold),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
             ),
           ),
           Row(
@@ -60,8 +67,8 @@ class _TopPanelState extends ConsumerState<TopPanel> {
               const Text('Ignore Null'),
               Switch(
                 value: model.options.ignoreNull,
-                onChanged: (v) => notifier.setOptions(
-                    model.options.copyWith(ignoreNull: v)),
+                onChanged: (v) =>
+                    notifier.setOptions(model.options.copyWith(ignoreNull: v)),
               ),
             ],
           ),
@@ -71,24 +78,25 @@ class _TopPanelState extends ConsumerState<TopPanel> {
               const Text('Null Safety'),
               Switch(
                 value: model.nullSafety,
-                onChanged: (v) => notifier.state =
-                    notifier.state.copyWith(nullSafety: v),
+                onChanged: (v) =>
+                    notifier.state = notifier.state.copyWith(nullSafety: v),
               ),
             ],
           ),
           DropdownButton<String>(
             value: model.options.caseStyle,
-            items: ['camelCase', 'snakeCase', 'pascalCase']
-                .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                .toList(),
-            onChanged: (v) => notifier.setOptions(
-                model.options.copyWith(caseStyle: v)),
+            items: [
+              'camelCase',
+              'snakeCase',
+              'pascalCase',
+            ].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+            onChanged: (v) =>
+                notifier.setOptions(model.options.copyWith(caseStyle: v)),
           ),
           Wrap(
             spacing: 8,
             children: ['Encode', 'Decode'].map((method) {
-              final selected =
-                  model.options.generateMethods.contains(method);
+              final selected = model.options.generateMethods.contains(method);
               return FilterChip(
                 label: Text(method),
                 selected: selected,
@@ -100,7 +108,8 @@ class _TopPanelState extends ConsumerState<TopPanel> {
                     list.remove(method);
                   }
                   notifier.setOptions(
-                      model.options.copyWith(generateMethods: list));
+                    model.options.copyWith(generateMethods: list),
+                  );
                 },
               );
             }).toList(),

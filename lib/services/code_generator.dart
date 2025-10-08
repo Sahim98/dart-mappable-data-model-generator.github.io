@@ -13,32 +13,42 @@ String generateClassFromJson(
   final buffer = StringBuffer();
   final generatedClasses = <String>{};
 
+  String _makeNullable(String type) {
+    if (type.endsWith('?')) return type;
+    return '$type?';
+  }
+
   void _generate(String className, Map<String, dynamic> json) {
     final fields = <String, String>{}; // fieldName -> type
     final nested = <String, Map<String, dynamic>>{};
 
     // detect field types
     json.forEach((key, value) {
+      String fieldType;
+
       if (value == null) {
-        fields[key] = 'String?';
+        fieldType = 'String?';
       } else if (value is Map<String, dynamic>) {
         final nestedName = ReCase(key).pascalCase;
         nested[nestedName] = value;
-        fields[key] = '$nestedName?';
+        fieldType = nestedName;
       } else if (value is List) {
         if (value.isEmpty) {
-          fields[key] = 'List<dynamic>';
+          fieldType = 'List<dynamic>';
         } else if (value.first is Map<String, dynamic>) {
           final nestedName = ReCase(key).pascalCase;
           nested[nestedName] = value.first;
-          fields[key] = 'List<$nestedName>';
+          fieldType = 'List<$nestedName>';
         } else {
           final itemType = _inferType(value.first);
-          fields[key] = 'List<$itemType>';
+          fieldType = 'List<$itemType>';
         }
       } else {
-        fields[key] = _inferType(value);
+        fieldType = _inferType(value);
       }
+
+      // Make nullable if ignoreNull is false
+      fields[key] = options.ignoreNull ? fieldType : _makeNullable(fieldType);
     });
 
     // generate current class first
