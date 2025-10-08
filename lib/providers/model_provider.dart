@@ -28,5 +28,8 @@ class ModelNotifier extends StateNotifier<ModelConfig> {
   }
 
   String get generatedCode => generateClassFromJson(
-      state.className, state.jsonMap, state.options);
+    state.className,
+    state.jsonMap,
+    state.options,
+  );
 }

@@ -6,7 +6,10 @@ final _formatter = DartFormatter();
 
 /// Generate Dart classes recursively from JSON map
 String generateClassFromJson(
-    String className, Map<String, dynamic> jsonMap, MappableOptions options) {
+  String className,
+  Map<String, dynamic> jsonMap,
+  MappableOptions options,
+) {
   final buffer = StringBuffer();
   final generatedClasses = <String>{};
 
@@ -38,15 +41,7 @@ String generateClassFromJson(
       }
     });
 
-    // generate nested classes first
-    nested.forEach((nestedName, nestedJson) {
-      if (!generatedClasses.contains(nestedName)) {
-        generatedClasses.add(nestedName);
-        _generate(nestedName, nestedJson);
-      }
-    });
-
-    // generate current class
+    // generate current class first
     final annotation = _buildMappableAnnotation(options);
     buffer.writeln('// GENERATED CLASS: $className');
     buffer.writeln(annotation);
@@ -65,6 +60,14 @@ String generateClassFromJson(
     });
     buffer.writeln('  });\n}');
     buffer.writeln('');
+
+    // generate nested classes after
+    nested.forEach((nestedName, nestedJson) {
+      if (!generatedClasses.contains(nestedName)) {
+        generatedClasses.add(nestedName);
+        _generate(nestedName, nestedJson);
+      }
+    });
   }
 
   _generate(ReCase(className).pascalCase, jsonMap);
@@ -82,7 +85,9 @@ String _buildMappableAnnotation(MappableOptions o) {
   if (o.ignoreNull) params.add('ignoreNull: true');
   if (o.caseStyle.isNotEmpty) params.add('caseStyle: CaseStyle.${o.caseStyle}');
   if (o.generateMethods.isNotEmpty) {
-    final methods = o.generateMethods.map((m) => 'GenerateMethods.$m').join(' | ');
+    final methods = o.generateMethods
+        .map((m) => 'GenerateMethods.$m')
+        .join(' | ');
     params.add('generateMethods: $methods');
   }
   if (params.isEmpty) return '@MappableClass()';

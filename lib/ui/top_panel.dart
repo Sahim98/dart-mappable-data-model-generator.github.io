@@ -17,8 +17,6 @@ class _TopPanelState extends ConsumerState<TopPanel> {
     super.initState();
     final model = ref.read(modelProvider);
     _classController = TextEditingController(text: model.className);
-
-    // Listen changes and update provider
     _classController.addListener(() {
       ref.read(modelProvider.notifier).setClassName(_classController.text);
     });
@@ -35,7 +33,6 @@ class _TopPanelState extends ConsumerState<TopPanel> {
     final model = ref.watch(modelProvider);
     final notifier = ref.read(modelProvider.notifier);
 
-    // Only update controller text if it differs (to avoid cursor jumps)
     if (_classController.text != model.className) {
       _classController.text = model.className;
       _classController.selection = TextSelection.fromPosition(
@@ -50,7 +47,6 @@ class _TopPanelState extends ConsumerState<TopPanel> {
         spacing: 24,
         runSpacing: 8,
         children: [
-          // Class name
           SizedBox(
             width: 180,
             child: TextField(
@@ -58,30 +54,41 @@ class _TopPanelState extends ConsumerState<TopPanel> {
               decoration: const InputDecoration(labelText: 'Class Name'),
             ),
           ),
-          // ignoreNull
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('ignoreNull'),
+              const Text('Ignore Null'),
               Switch(
                 value: model.options.ignoreNull,
-                onChanged: (v) => notifier.setOptions(model.options.copyWith(ignoreNull: v)),
+                onChanged: (v) => notifier.setOptions(
+                    model.options.copyWith(ignoreNull: v)),
               ),
             ],
           ),
-          // caseStyle dropdown
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Null Safety'),
+              Switch(
+                value: model.nullSafety,
+                onChanged: (v) => notifier.state =
+                    notifier.state.copyWith(nullSafety: v),
+              ),
+            ],
+          ),
           DropdownButton<String>(
             value: model.options.caseStyle,
             items: ['camelCase', 'snakeCase', 'pascalCase']
                 .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                 .toList(),
-            onChanged: (v) => notifier.setOptions(model.options.copyWith(caseStyle: v)),
+            onChanged: (v) => notifier.setOptions(
+                model.options.copyWith(caseStyle: v)),
           ),
-          // generateMethods multiselect chips
           Wrap(
             spacing: 8,
-            children: ['toJson', 'fromJson', 'copyWith'].map((method) {
-              final selected = model.options.generateMethods.contains(method);
+            children: ['Encode', 'Decode'].map((method) {
+              final selected =
+                  model.options.generateMethods.contains(method);
               return FilterChip(
                 label: Text(method),
                 selected: selected,
@@ -92,7 +99,8 @@ class _TopPanelState extends ConsumerState<TopPanel> {
                   } else {
                     list.remove(method);
                   }
-                  notifier.setOptions(model.options.copyWith(generateMethods: list));
+                  notifier.setOptions(
+                      model.options.copyWith(generateMethods: list));
                 },
               );
             }).toList(),

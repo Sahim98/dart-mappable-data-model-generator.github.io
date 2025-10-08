@@ -1,13 +1,19 @@
 class MappableOptions {
   final bool ignoreNull;
-  final String caseStyle; // e.g. "snakeCase", "camelCase", "pascalCase"
-  final List<String> generateMethods; // e.g. ["toJson","fromJson","copyWith"]
+  final String caseStyle;
+  final List<String> generateMethods; // e.g., ['Encode', 'Decode']
 
   MappableOptions({
-    this.ignoreNull = false,
-    this.caseStyle = 'camelCase',
-    List<String>? generateMethods,
-  }) : generateMethods = generateMethods ?? [];
+    required this.ignoreNull,
+    required this.caseStyle,
+    required this.generateMethods,
+  });
+
+  factory MappableOptions.initial() => MappableOptions(
+    ignoreNull: true,
+    caseStyle: 'camelCase',
+    generateMethods: ['Encode', 'Decode'],
+  );
 
   MappableOptions copyWith({
     bool? ignoreNull,
