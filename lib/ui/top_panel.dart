@@ -4,7 +4,6 @@ import 'package:quick_parse/models/model_config.dart';
 import 'package:quick_parse/utils/enum/conversion_mode_enum.dart';
 import '../providers/model_provider.dart';
 
-
 class TopPanel extends ConsumerStatefulWidget {
   const TopPanel({super.key});
 
@@ -94,7 +93,10 @@ class _TopPanelState extends ConsumerState<TopPanel> {
   }
 
   Widget _buildJsonOptions(
-      WidgetRef ref, ModelConfig model, ModelNotifier notifier) {
+    WidgetRef ref,
+    ModelConfig model,
+    ModelNotifier notifier,
+  ) {
     return Wrap(
       spacing: 24,
       runSpacing: 8,
@@ -118,14 +120,48 @@ class _TopPanelState extends ConsumerState<TopPanel> {
             ),
           ],
         ),
+
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Null Safety'),
-            Switch(
-              value: model.nullSafety,
-              onChanged: (v) =>
-                  notifier.state = notifier.state.copyWith(nullSafety: v),
+            const Text('Generate Encode'),
+            Checkbox(
+              value: model.options.generateMethods.contains('encode'),
+              onChanged: (v) {
+                final methods = List<String>.from(
+                  model.options.generateMethods,
+                );
+                if (v == true) {
+                  if (!methods.contains('encode')) methods.add('encode');
+                } else {
+                  methods.remove('encode');
+                }
+                notifier.setOptions(
+                  model.options.copyWith(generateMethods: methods),
+                );
+              },
+            ),
+          ],
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Generate Decode'),
+            Checkbox(
+              value: model.options.generateMethods.contains('decode'),
+              onChanged: (v) {
+                final methods = List<String>.from(
+                  model.options.generateMethods,
+                );
+                if (v == true) {
+                  if (!methods.contains('decode')) methods.add('decode');
+                } else {
+                  methods.remove('decode');
+                }
+                notifier.setOptions(
+                  model.options.copyWith(generateMethods: methods),
+                );
+              },
             ),
           ],
         ),

@@ -12,7 +12,7 @@ class MappableOptions {
   factory MappableOptions.initial() => MappableOptions(
     ignoreNull: true,
     caseStyle: 'camelCase',
-    generateMethods: ['Encode', 'Decode'],
+    generateMethods: ['encode', 'decode'],
   );
 
   MappableOptions copyWith({
