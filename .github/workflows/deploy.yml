@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main  # Change this to 'master' if your default branch is master
-      - feat/create-entity
   workflow_dispatch:  # Allows manual deployment from GitHub Actions tab
 
 permissions:
