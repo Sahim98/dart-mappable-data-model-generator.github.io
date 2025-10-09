@@ -3,7 +3,8 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - main  # Change this to 'master' if your default branch is master
+      - main
+      - development  # Also deploy from development branch
   workflow_dispatch:  # Allows manual deployment from GitHub Actions tab
 
 permissions:
@@ -32,7 +33,7 @@ jobs:
         run: flutter pub get
       
       - name: Build web
-        run: flutter build web --release --base-href "/"
+        run: flutter build web --release --base-href "/dart-mappable-data-model-generator.github.io/"
       
       - name: Setup Pages
         uses: actions/configure-pages@v4
