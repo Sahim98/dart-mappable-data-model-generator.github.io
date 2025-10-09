@@ -1,0 +1,4 @@
+enum ConversionMode {
+  jsonToModel,
+  modelToEntity,
+}
