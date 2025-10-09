@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,7 +8,6 @@ import 'package:quick_parse/ui/code_preview.dart';
 import 'package:quick_parse/ui/top_panel.dart';
 import '../providers/model_provider.dart';
 import 'package:quick_parse/utils/enum/conversion_mode_enum.dart';
-
 
 class GeneratorScreen extends ConsumerWidget {
   const GeneratorScreen({super.key});
@@ -45,9 +45,7 @@ class GeneratorScreen extends ConsumerWidget {
                           model.mode == ConversionMode.jsonToModel
                               ? 'JSON Input'
                               : 'Model Input',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
+                          style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
@@ -69,9 +67,9 @@ class GeneratorScreen extends ConsumerWidget {
                             maxLines: null,
                             decoration: InputDecoration(
                               filled: true,
-                              fillColor: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest,
+                              fillColor: Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -91,7 +89,6 @@ class GeneratorScreen extends ConsumerWidget {
 
                 /// 🧩 Right Output Preview(s)
                 Expanded(
-                  flex: 1,
                   child: Padding(
                     padding: const EdgeInsets.all(12.0),
                     child: _buildOutputArea(context, model, outputs),
@@ -114,23 +111,32 @@ class GeneratorScreen extends ConsumerWidget {
       // single preview
       return CodePreview(
         title: 'Data Model',
-        code: outputs['model'] ?? '',
+        code: outputs['model']?.isEmpty ?? true
+            ? '//No code generated yet for model....'
+            : outputs['model'] ?? '',
       );
     } else {
+      log(
+        "Generated outputs - Entity: ${outputs['entity']?.isEmpty == true ? '(empty)' : 'generated'}, Model: ${outputs['model']?.isEmpty == true ? '(empty)' : 'generated'}",
+      );
       // dual preview side by side
       return Row(
         children: [
           Expanded(
             child: CodePreview(
               title: 'Entity',
-              code: outputs['entity'] ?? '',
+              code: outputs['entity']!.length < 2
+                  ? ('//No code generated yet for entity....').padRight(500, '\t') 
+                  : outputs['entity'] ?? '',
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: CodePreview(
               title: 'Model',
-              code: outputs['model'] ?? '',
+              code: outputs['model']!.length < 2
+                  ? ('//No code generated yet for model....').padRight(500, '\t')
+                  : outputs['model'] ?? '',
             ),
           ),
         ],

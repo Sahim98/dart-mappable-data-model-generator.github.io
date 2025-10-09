@@ -1,3 +1,4 @@
+import 'dart:developer';
 
 import 'package:recase/recase.dart';
 import 'package:dart_style/dart_style.dart';
@@ -115,9 +116,13 @@ String _inferType(dynamic value) {
   return 'dynamic';
 }
 
-
-
 Map<String, String> convertModelToEntity(String modelCode) {
+  log("modelCode: $modelCode");
+  // Handle empty or whitespace-only input
+  if (modelCode.trim().isEmpty) {
+    return {'entity': '', 'model': ''};
+  }
+
   final entityBuffer = StringBuffer();
   final formatter = DartFormatter();
 
@@ -146,8 +151,9 @@ Map<String, String> convertModelToEntity(String modelCode) {
     final classContent = modelCode.substring(startIndex, endIndex);
 
     // Construct Entity name
-    final entityName =
-        className.endsWith('Entity') ? className : '${className}Entity';
+    final entityName = className.endsWith('Entity')
+        ? className
+        : '${className}Entity';
 
     // Create Entity class version
     var entityClass = classContent
@@ -171,8 +177,9 @@ Map<String, String> convertModelToEntity(String modelCode) {
   final modelModified = modelCode.replaceAllMapped(classRegex, (match) {
     final className = match.group(1)!;
     final mixin = match.group(2);
-    final entityName =
-        className.endsWith('Entity') ? className : '${className}Entity';
+    final entityName = className.endsWith('Entity')
+        ? className
+        : '${className}Entity';
     final mixinPart = mixin != null ? ' with $mixin' : '';
     return '@MappableClass()\nclass $className extends $entityName$mixinPart';
   });
@@ -183,10 +190,6 @@ Map<String, String> convertModelToEntity(String modelCode) {
       'model': formatter.format(modelModified),
     };
   } catch (_) {
-    return {
-      'entity': entityBuffer.toString(),
-      'model': modelModified,
-    };
+    return {'entity': entityBuffer.toString(), 'model': modelModified};
   }
 }
-
