@@ -52,6 +52,7 @@ class GeneratorScreen extends ConsumerWidget {
                         Expanded(
                           child: TextField(
                             controller: TextEditingController(
+
                               text: model.mode == ConversionMode.jsonToModel
                                   ? _prettyJson(model.jsonMap)
                                   : model.rawModelInput,
@@ -66,6 +67,7 @@ class GeneratorScreen extends ConsumerWidget {
                             expands: true,
                             maxLines: null,
                             decoration: InputDecoration(
+                              
                               filled: true,
                               fillColor: Theme.of(
                                 context,
@@ -133,6 +135,7 @@ class GeneratorScreen extends ConsumerWidget {
           const SizedBox(width: 12),
           Expanded(
             child: CodePreview(
+
               title: 'Model',
               code: outputs['model']!.length < 2
                   ? ('//No code generated yet for model....').padRight(500, '\t')

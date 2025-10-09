@@ -15,12 +15,12 @@ String generateClassFromJson(
   final buffer = StringBuffer();
   final generatedClasses = <String>{};
 
-  String _makeNullable(String type) {
+  String makeNullable(String type) {
     if (type.endsWith('?')) return type;
     return '$type?';
   }
 
-  void _generate(String className, Map<String, dynamic> json) {
+  void generate(String className, Map<String, dynamic> json) {
     final fields = <String, String>{}; // fieldName -> type
     final nested = <String, Map<String, dynamic>>{};
 
@@ -29,7 +29,7 @@ String generateClassFromJson(
       String fieldType;
 
       if (value == null) {
-        fieldType = 'String?';
+        fieldType = 'dynamic';
       } else if (value is Map<String, dynamic>) {
         final nestedName = ReCase(key).pascalCase;
         nested[nestedName] = value;
@@ -50,7 +50,7 @@ String generateClassFromJson(
       }
 
       // Make nullable if ignoreNull is false
-      fields[key] = options.ignoreNull ? fieldType : _makeNullable(fieldType);
+      fields[key] = options.ignoreNull ? fieldType : makeNullable(fieldType);
     });
 
     // generate current class first
@@ -77,12 +77,12 @@ String generateClassFromJson(
     nested.forEach((nestedName, nestedJson) {
       if (!generatedClasses.contains(nestedName)) {
         generatedClasses.add(nestedName);
-        _generate(nestedName, nestedJson);
+        generate(nestedName, nestedJson);
       }
     });
   }
 
-  _generate(ReCase(className).pascalCase, jsonMap);
+  generate(ReCase(className).pascalCase, jsonMap);
 
   try {
     return _formatter.format(buffer.toString());
@@ -108,12 +108,39 @@ String _buildMappableAnnotation(MappableOptions o) {
 
 /// Infer Dart type for primitives
 String _inferType(dynamic value) {
-  if (value == null) return 'String?';
+  if (value == null) return 'dynamic';
   if (value is int) return 'int';
   if (value is double) return 'double';
   if (value is bool) return 'bool';
   if (value is String) return 'String';
   return 'dynamic';
+}
+
+/// Check if a type is a primary type (String, int, double, num)
+bool _isPrimaryType(String type) {
+  // Remove nullable marker, whitespace, and generics
+  final baseType = type.replaceAll('?', '').trim().split('<')[0];
+  return baseType == 'String' ||
+      baseType == 'int' ||
+      baseType == 'double' ||
+      baseType == 'num' ||
+      baseType == 'bool';
+}
+
+/// Extract fields from class content
+Map<String, String> _extractFields(String classContent) {
+  final fields = <String, String>{};
+  // Match: final Type fieldName;
+  final fieldRegex = RegExp(r'final\s+([\w<>?,\s]+)\s+(\w+)\s*;');
+  final matches = fieldRegex.allMatches(classContent);
+
+  for (final match in matches) {
+    final type = match.group(1)!.trim();
+    final name = match.group(2)!;
+    fields[name] = type;
+  }
+
+  return fields;
 }
 
 Map<String, String> convertModelToEntity(String modelCode) {
@@ -124,6 +151,7 @@ Map<String, String> convertModelToEntity(String modelCode) {
   }
 
   final entityBuffer = StringBuffer();
+  final modelBuffer = StringBuffer();
   final formatter = DartFormatter();
 
   // Match @MappableClass and class declaration
@@ -136,6 +164,7 @@ Map<String, String> convertModelToEntity(String modelCode) {
 
   for (final match in matches) {
     final className = match.group(1)!;
+    final mixin = match.group(2);
     final startIndex = match.start;
 
     // Find class body braces
@@ -150,12 +179,15 @@ Map<String, String> convertModelToEntity(String modelCode) {
 
     final classContent = modelCode.substring(startIndex, endIndex);
 
+    // Extract fields to determine which are primary types
+    final fields = _extractFields(classContent);
+
     // Construct Entity name
     final entityName = className.endsWith('Entity')
         ? className
         : '${className}Entity';
 
-    // Create Entity class version
+    // Create Entity class version (keep all fields)
     var entityClass = classContent
         // Remove annotation
         .replaceFirst(RegExp(r'@MappableClass[^\n]*\n'), '')
@@ -164,32 +196,61 @@ Map<String, String> convertModelToEntity(String modelCode) {
           RegExp(r'class\s+' + className + r'(?:\s+[^{]*)?\{'),
           (m) => 'class $entityName {',
         )
-        // Remove with clauses inside (if any still remain)
+        // Remove with clauses
         .replaceAll(RegExp(r'with\s+\w+'), '')
+        // Fix constructor name to match entity name
+        .replaceAllMapped(
+          RegExp(r'const\s+' + className + r'\('),
+          (m) => 'const $entityName(',
+        )
         .trim();
 
     entityBuffer.writeln('// ENTITY CLASS GENERATED FROM $className');
     entityBuffer.writeln(entityClass);
     entityBuffer.writeln('\n');
-  }
 
-  // Modify model so it extends the entity
-  final modelModified = modelCode.replaceAllMapped(classRegex, (match) {
-    final className = match.group(1)!;
-    final mixin = match.group(2);
-    final entityName = className.endsWith('Entity')
-        ? className
-        : '${className}Entity';
+    // Create Model class that extends Entity
     final mixinPart = mixin != null ? ' with $mixin' : '';
-    return '@MappableClass()\nclass $className extends $entityName$mixinPart';
-  });
+
+    // Start building model class
+    modelBuffer.writeln('@MappableClass()');
+    modelBuffer.writeln('class $className extends $entityName$mixinPart {');
+
+    // Add only non-primary type fields
+    fields.forEach((name, type) {
+      if (!_isPrimaryType(type)) {
+        modelBuffer.writeln('  final $type $name;');
+      }
+    });
+
+    // Add constructor
+    modelBuffer.writeln('');
+    modelBuffer.writeln('  const $className({');
+
+    // Add constructor parameters
+    fields.forEach((name, type) {
+      if (_isPrimaryType(type)) {
+        // Use super. for primary types (no 'required' prefix needed)
+        modelBuffer.writeln('    super.$name,');
+      } else {
+        // Use this. for non-primary types (with 'required' if not nullable)
+        final requiredPart = type.endsWith('?') ? '' : 'required ';
+        modelBuffer.writeln('    ${requiredPart}this.$name,');
+      }
+    });
+
+    modelBuffer.writeln('  });');
+    modelBuffer.writeln('}');
+    modelBuffer.writeln('');
+  }
 
   try {
     return {
       'entity': formatter.format(entityBuffer.toString()),
-      'model': formatter.format(modelModified),
+      'model': formatter.format(modelBuffer.toString()),
     };
-  } catch (_) {
-    return {'entity': entityBuffer.toString(), 'model': modelModified};
+  } catch (e) {
+    log('Formatting error: $e');
+    return {'entity': entityBuffer.toString(), 'model': modelBuffer.toString()};
   }
 }
