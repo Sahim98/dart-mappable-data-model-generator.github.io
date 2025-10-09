@@ -52,7 +52,7 @@ class _JsonInputState extends ConsumerState<JsonInput> {
               minLines: null,
               textAlignVertical: TextAlignVertical.top, // cursor at top
               decoration: InputDecoration(
-                hintText: '{ "id": 1, "name": "John" }',
+                hintText: 'Example: { "id": 1, "name": "John" }',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),

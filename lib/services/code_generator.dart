@@ -113,3 +113,70 @@ String _inferType(dynamic value) {
   if (value is String) return 'String';
   return 'dynamic';
 }
+
+
+
+/// Converts annotated Mappable model classes into
+/// Entity + Model classes where:
+/// - Entity: plain class with entity
+/// - Model: extends corresponding Entity
+Map<String, String> convertModelToEntity(String modelCode) {
+  final entityBuffer = StringBuffer();
+
+  final classRegex = RegExp(
+    r'@MappableClass[^\n]*\n\s*class\s+(\w+)\s+(?:extends\s+\w+\s+)?with\s+(\w+)',
+    multiLine: true,
+  );
+
+  final matches = classRegex.allMatches(modelCode);
+  final formatter = DartFormatter();
+
+  for (final match in matches) {
+    final className = match.group(1)!;
+    final startIndex = match.start;
+
+    // find where the class body ends by brace matching
+    final braceStart = modelCode.indexOf('{', startIndex);
+    int braceCount = 1;
+    int endIndex = braceStart + 1;
+    while (endIndex < modelCode.length && braceCount > 0) {
+      if (modelCode[endIndex] == '{') braceCount++;
+      if (modelCode[endIndex] == '}') braceCount--;
+      endIndex++;
+    }
+
+    final classContent = modelCode.substring(startIndex, endIndex);
+
+    // Generate clean Entity version
+    final entityClass = classContent
+        .replaceFirst(RegExp(r'@MappableClass[^\n]*\n'), '')
+        .replaceFirst(RegExp(r'class\s+$className\s+[^\{]*'), 'class ${className}Entity ')
+        .replaceAll(RegExp(r'with\s+\w+'), '') // remove with mixins
+        .trim();
+
+    entityBuffer.writeln('// ENTITY CLASS GENERATED FROM $className');
+    entityBuffer.writeln(entityClass);
+    entityBuffer.writeln('\n');
+  }
+
+  // Now generate models extending their Entity versions
+  final modelModified = modelCode.replaceAllMapped(classRegex, (match) {
+    final className = match.group(1)!;
+    final mixin = match.group(2)!;
+    return '@MappableClass()\nclass $className extends ${className}Entity with $mixin';
+  });
+
+  try {
+    return {
+      'entity': formatter.format(entityBuffer.toString()),
+      'model': formatter.format(modelModified),
+    };
+  } catch (_) {
+    // fallback unformatted
+    return {
+      'entity': entityBuffer.toString(),
+      'model': modelModified,
+    };
+  }
+}
+

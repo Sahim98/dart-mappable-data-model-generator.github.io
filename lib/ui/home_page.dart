@@ -26,7 +26,10 @@ class HomePage extends StatelessWidget {
               children: const [
                 Expanded(child: JsonInput()),
                 VerticalDivider(width: 1),
-                Expanded(child: CodePreview()),
+                Expanded(child: CodePreview(
+                  title: 'Model',
+                  code: '',
+                )),
               ],
             ),
           ),
