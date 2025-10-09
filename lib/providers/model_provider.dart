@@ -5,20 +5,22 @@ import '../models/mappable_options.dart';
 import '../services/code_generator.dart';
 import 'dart:convert';
 
-final modelProvider =
-    StateNotifierProvider<ModelNotifier, ModelConfig>((ref) => ModelNotifier());
+final modelProvider = StateNotifierProvider<ModelNotifier, ModelConfig>(
+  (ref) => ModelNotifier(),
+);
 
 class ModelNotifier extends StateNotifier<ModelConfig> {
   ModelNotifier() : super(ModelConfig.initial());
 
-  void setMode(ConversionMode mode) =>
-      state = state.copyWith(mode: mode);
+  void setMode(ConversionMode mode) => state = state.copyWith(mode: mode);
 
-  void setClassName(String name) =>
-      state = state.copyWith(className: name);
+  void setClassName(String name) => state = state.copyWith(className: name);
 
   void setOptions(MappableOptions options) =>
       state = state.copyWith(options: options);
+
+  void setNullSafety(bool nullSafety) =>
+      state = state.copyWith(nullSafety: nullSafety);
 
   void setRawModelInput(String code) =>
       state = state.copyWith(rawModelInput: code);
@@ -36,14 +38,15 @@ class ModelNotifier extends StateNotifier<ModelConfig> {
 
   Map<String, String> get generatedOutputs {
     if (state.mode == ConversionMode.jsonToModel) {
-      final code = generateClassFromJson(state.className, state.jsonMap, state.options);
+      final code = generateClassFromJson(
+        state.className,
+        state.jsonMap,
+        state.options,
+      );
       return {'model': code};
     } else {
       final outputs = convertModelToEntity(state.rawModelInput);
-      return {
-        'entity': outputs['entity']!,
-        'model': outputs['model']!,
-      };
+      return {'entity': outputs['entity']!, 'model': outputs['model']!};
     }
   }
 }

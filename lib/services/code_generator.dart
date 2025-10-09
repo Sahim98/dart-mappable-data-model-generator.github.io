@@ -98,12 +98,18 @@ String _buildMappableAnnotation(MappableOptions o) {
   if (o.caseStyle.isNotEmpty) params.add('caseStyle: CaseStyle.${o.caseStyle}');
   if (o.generateMethods.isNotEmpty) {
     final methods = o.generateMethods
-        .map((m) => 'GenerateMethods.$m')
+        .map((m) => 'GenerateMethods.${_capitalize(m)}')
         .join(' | ');
     params.add('generateMethods: $methods');
   }
   if (params.isEmpty) return '@MappableClass()';
   return '@MappableClass(${params.join(', ')})';
+}
+
+/// Capitalize first letter of a string
+String _capitalize(String s) {
+  if (s.isEmpty) return s;
+  return s[0].toUpperCase() + s.substring(1);
 }
 
 /// Infer Dart type for primitives
