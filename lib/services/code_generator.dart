@@ -1,3 +1,4 @@
+
 import 'package:recase/recase.dart';
 import 'package:dart_style/dart_style.dart';
 import '../models/mappable_options.dart';
@@ -116,26 +117,23 @@ String _inferType(dynamic value) {
 
 
 
-/// Converts annotated Mappable model classes into
-/// Entity + Model classes where:
-/// - Entity: plain class with entity
-/// - Model: extends corresponding Entity
 Map<String, String> convertModelToEntity(String modelCode) {
   final entityBuffer = StringBuffer();
+  final formatter = DartFormatter();
 
+  // Match @MappableClass and class declaration
   final classRegex = RegExp(
-    r'@MappableClass[^\n]*\n\s*class\s+(\w+)\s+(?:extends\s+\w+\s+)?with\s+(\w+)',
+    r'@MappableClass[^\n]*\n\s*class\s+(\w+)(?:\s+extends\s+\w+)?(?:\s+with\s+(\w+))?',
     multiLine: true,
   );
 
   final matches = classRegex.allMatches(modelCode);
-  final formatter = DartFormatter();
 
   for (final match in matches) {
     final className = match.group(1)!;
     final startIndex = match.start;
 
-    // find where the class body ends by brace matching
+    // Find class body braces
     final braceStart = modelCode.indexOf('{', startIndex);
     int braceCount = 1;
     int endIndex = braceStart + 1;
@@ -147,11 +145,21 @@ Map<String, String> convertModelToEntity(String modelCode) {
 
     final classContent = modelCode.substring(startIndex, endIndex);
 
-    // Generate clean Entity version
-    final entityClass = classContent
+    // Construct Entity name
+    final entityName =
+        className.endsWith('Entity') ? className : '${className}Entity';
+
+    // Create Entity class version
+    var entityClass = classContent
+        // Remove annotation
         .replaceFirst(RegExp(r'@MappableClass[^\n]*\n'), '')
-        .replaceFirst(RegExp(r'class\s+$className\s+[^\{]*'), 'class ${className}Entity ')
-        .replaceAll(RegExp(r'with\s+\w+'), '') // remove with mixins
+        // Replace entire class declaration line properly
+        .replaceFirstMapped(
+          RegExp(r'class\s+' + className + r'(?:\s+[^{]*)?\{'),
+          (m) => 'class $entityName {',
+        )
+        // Remove with clauses inside (if any still remain)
+        .replaceAll(RegExp(r'with\s+\w+'), '')
         .trim();
 
     entityBuffer.writeln('// ENTITY CLASS GENERATED FROM $className');
@@ -159,11 +167,14 @@ Map<String, String> convertModelToEntity(String modelCode) {
     entityBuffer.writeln('\n');
   }
 
-  // Now generate models extending their Entity versions
+  // Modify model so it extends the entity
   final modelModified = modelCode.replaceAllMapped(classRegex, (match) {
     final className = match.group(1)!;
-    final mixin = match.group(2)!;
-    return '@MappableClass()\nclass $className extends ${className}Entity with $mixin';
+    final mixin = match.group(2);
+    final entityName =
+        className.endsWith('Entity') ? className : '${className}Entity';
+    final mixinPart = mixin != null ? ' with $mixin' : '';
+    return '@MappableClass()\nclass $className extends $entityName$mixinPart';
   });
 
   try {
@@ -172,7 +183,6 @@ Map<String, String> convertModelToEntity(String modelCode) {
       'model': formatter.format(modelModified),
     };
   } catch (_) {
-    // fallback unformatted
     return {
       'entity': entityBuffer.toString(),
       'model': modelModified,
