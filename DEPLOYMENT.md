@@ -1,39 +1,4 @@
-# Deployment Guide for GitHub Pages
-
-This guide will help you deploy your Flutter web app to GitHub Pages.
-
-## Automatic Deployment (Recommended)
-
-The repository is now configured with GitHub Actions for automatic deployment.
-
-### Steps to Enable GitHub Pages:
-
-1. **Push your code to GitHub:**
-   ```bash
-   git add .
-   git commit -m "Add GitHub Actions workflow for deployment"
-   git push origin feat/create-entity
-   ```
-
-2. **Enable GitHub Pages in your repository:**
-   - Go to your GitHub repository: https://github.com/Sahim98/dart-mappable-data-model-generator
-   - Click on **Settings** (top menu)
-   - Scroll down and click on **Pages** (left sidebar)
-   - Under "Build and deployment":
-     - **Source**: Select "GitHub Actions"
-   - Click **Save**
-
-3. **Trigger the deployment:**
-   - The workflow will automatically run when you push to `main` or `feat/create-entity` branches
-   - Or manually trigger it from the **Actions** tab → **Deploy to GitHub Pages** → **Run workflow**
-
-4. **Access your deployed app:**
-   - After deployment completes (check the Actions tab), your app will be available at:
-   - **https://sahim98.github.io/quick_parse/**
-
-## Manual Deployment (Alternative)
-
-If you prefer to deploy manually:
+## Manual Deployment 
 
 1. **Build the web app:**
    ```bash
