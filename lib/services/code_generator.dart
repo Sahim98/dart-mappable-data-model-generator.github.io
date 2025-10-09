@@ -68,7 +68,7 @@ String generateClassFromJson(
     buffer.writeln('  const $className({');
     fields.forEach((name, type) {
       final requiredField = type.endsWith('?') ? '' : 'required ';
-      buffer.writeln('    $requiredField$name,');
+      buffer.writeln('    ${requiredField}this.$name,');
     });
     buffer.writeln('  });\n}');
     buffer.writeln('');
@@ -160,9 +160,9 @@ Map<String, String> convertModelToEntity(String modelCode) {
   final modelBuffer = StringBuffer();
   final formatter = DartFormatter();
 
-  // Match @MappableClass and class declaration
+  // Match @MappableClass and class declaration (supports multi-line annotations)
   final classRegex = RegExp(
-    r'@MappableClass[^\n]*\n\s*class\s+(\w+)(?:\s+extends\s+\w+)?(?:\s+with\s+(\w+))?',
+    r'@MappableClass[\s\S]*?class\s+(\w+)(?:\s+extends\s+\w+)?(?:\s+with\s+(\w+))?',
     multiLine: true,
   );
 
@@ -195,8 +195,8 @@ Map<String, String> convertModelToEntity(String modelCode) {
 
     // Create Entity class version (keep all fields)
     var entityClass = classContent
-        // Remove annotation
-        .replaceFirst(RegExp(r'@MappableClass[^\n]*\n'), '')
+        // Remove annotation (supports multi-line)
+        .replaceFirst(RegExp(r'@MappableClass[\s\S]*?(?=class)'), '')
         // Replace entire class declaration line properly
         .replaceFirstMapped(
           RegExp(r'class\s+' + className + r'(?:\s+[^{]*)?\{'),
