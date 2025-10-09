@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main  # Change this to 'master' if your default branch is master
+      - feat/create-entity
   workflow_dispatch:  # Allows manual deployment from GitHub Actions tab
 
 permissions:
@@ -14,6 +15,9 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     
     steps:
       - name: Checkout code
@@ -29,7 +33,7 @@ jobs:
         run: flutter pub get
       
       - name: Build web
-        run: flutter build web --release --base-href "/quick_parse/"
+        run: flutter build web --release --base-href "/"
       
       - name: Setup Pages
         uses: actions/configure-pages@v4
