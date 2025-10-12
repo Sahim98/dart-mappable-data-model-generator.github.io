@@ -9,15 +9,46 @@ import 'package:quick_parse/ui/top_panel.dart';
 import '../providers/model_provider.dart';
 import 'package:quick_parse/utils/enum/conversion_mode_enum.dart';
 
-class GeneratorScreen extends ConsumerWidget {
+class GeneratorScreen extends ConsumerStatefulWidget {
   const GeneratorScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GeneratorScreen> createState() => _GeneratorScreenState();
+}
+
+class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
+  late TextEditingController _textController;
+  ConversionMode? _lastMode;
+
+  @override
+  void initState() {
+    super.initState();
+    _textController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final model = ref.watch(modelProvider);
     final notifier = ref.read(modelProvider.notifier);
 
     final outputs = notifier.generatedOutputs;
+
+    // Update controller text when mode changes or when model data changes externally
+    if (_lastMode != model.mode) {
+      _lastMode = model.mode;
+      final newText = model.mode == ConversionMode.jsonToModel
+          ? _prettyJson(model.jsonMap)
+          : model.rawModelInput;
+      if (_textController.text != newText) {
+        _textController.text = newText;
+      }
+    }
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -51,12 +82,7 @@ class GeneratorScreen extends ConsumerWidget {
                         const SizedBox(height: 8),
                         Expanded(
                           child: TextField(
-                            controller: TextEditingController(
-
-                              text: model.mode == ConversionMode.jsonToModel
-                                  ? _prettyJson(model.jsonMap)
-                                  : model.rawModelInput,
-                            ),
+                            controller: _textController,
                             onChanged: (value) {
                               if (model.mode == ConversionMode.jsonToModel) {
                                 notifier.updateFromJson(value);
@@ -67,7 +93,6 @@ class GeneratorScreen extends ConsumerWidget {
                             expands: true,
                             maxLines: null,
                             decoration: InputDecoration(
-                              
                               filled: true,
                               fillColor: Theme.of(
                                 context,
@@ -128,17 +153,22 @@ class GeneratorScreen extends ConsumerWidget {
             child: CodePreview(
               title: 'Entity',
               code: outputs['entity']!.length < 2
-                  ? ('//No code generated yet for entity....').padRight(500, '\t') 
+                  ? ('//No code generated yet for entity....').padRight(
+                      500,
+                      '\t',
+                    )
                   : outputs['entity'] ?? '',
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: CodePreview(
-
               title: 'Model',
               code: outputs['model']!.length < 2
-                  ? ('//No code generated yet for model....').padRight(500, '\t')
+                  ? ('//No code generated yet for model....').padRight(
+                      500,
+                      '\t',
+                    )
                   : outputs['model'] ?? '',
             ),
           ),
