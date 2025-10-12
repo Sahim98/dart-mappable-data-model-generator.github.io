@@ -63,7 +63,7 @@ class CodePreview extends StatelessWidget {
                       : const Color(0xFFf6f8fa),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+                    color: theme.colorScheme.outlineVariant.withAlpha(128),
                   ),
                 ),
                 padding: const EdgeInsets.all(12),
@@ -81,12 +81,12 @@ class CodePreview extends StatelessWidget {
                           ),
                         )
                       : Text(
-                          '// No code generated yet',
+                          '// No code generated yet'.padRight(500,'\t'),
                           style: TextStyle(
                             fontFamily: 'monospace',
                             fontSize: 13,
                             height: 1.5,
-                            color: theme.colorScheme.onSurface.withOpacity(0.6),
+                              color: theme.colorScheme.onSurface.withAlpha(153),
                           ),
                         ),
                 ),
