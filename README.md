@@ -39,7 +39,7 @@ A powerful Flutter-based code generator that converts JSON to Dart Mappable mode
 
 ## 🌐 Live Demo
 
-Try it now: **[https://sahim98.github.io/quick_parse/](https://sahim98.github.io/quick_parse/)**
+Try it now: **[https://sahim98.github.io/quick_parse/](https://sahim98.github.io/dart-mappable-data-model-generator.github.io)**
 
 ## 📸 Screenshots
 
