@@ -17,10 +17,19 @@ class _TopPanelState extends ConsumerState<TopPanel> {
   @override
   void initState() {
     super.initState();
-    final model = ref.read(modelProvider);
-    _classNameController = TextEditingController(text: model.className);
-    _classNameController.addListener(() {
-      ref.read(modelProvider.notifier).setClassName(_classNameController.text);
+    _classNameController = TextEditingController();
+
+    // Defer provider read until after first frame to prevent white screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final model = ref.read(modelProvider);
+        _classNameController.text = model.className;
+        _classNameController.addListener(() {
+          ref
+              .read(modelProvider.notifier)
+              .setClassName(_classNameController.text);
+        });
+      }
     });
   }
 

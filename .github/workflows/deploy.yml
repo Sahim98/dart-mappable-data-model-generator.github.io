@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - development  # Also deploy from development branch
   workflow_dispatch:  # Allows manual deployment from GitHub Actions tab
 
 permissions:
