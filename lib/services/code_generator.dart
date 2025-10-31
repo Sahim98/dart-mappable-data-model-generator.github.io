@@ -185,31 +185,107 @@ Map<String, String> convertModelToEntity(String modelCode) {
 
     final classContent = modelCode.substring(startIndex, endIndex);
 
+    // Extract MappableClass annotation parameters (handles multi-line annotations)
+    String mappableAnnotation = '@MappableClass()';
+    final annotationStart = classContent.indexOf('@MappableClass');
+    if (annotationStart != -1) {
+      // Find the opening parenthesis
+      int parenStart = classContent.indexOf('(', annotationStart);
+      if (parenStart != -1) {
+        // Match balanced parentheses to handle multi-line and nested parentheses
+        int parenCount = 1;
+        int parenEnd = parenStart + 1;
+        while (parenEnd < classContent.length && parenCount > 0) {
+          if (classContent[parenEnd] == '(') parenCount++;
+          if (classContent[parenEnd] == ')') parenCount--;
+          parenEnd++;
+        }
+        if (parenCount == 0) {
+          // Extract the full annotation including parameters
+          mappableAnnotation = classContent
+              .substring(annotationStart, parenEnd)
+              .trim();
+        } else {
+          // Fallback: just extract @MappableClass if parentheses are unbalanced
+          final simpleMatch = RegExp(
+            r'@MappableClass\s*\([^)]*\)',
+            dotAll: true,
+          ).firstMatch(classContent.substring(annotationStart));
+          if (simpleMatch != null) {
+            mappableAnnotation = simpleMatch.group(0)!.trim();
+          }
+        }
+      } else {
+        // No parentheses, just @MappableClass
+        final noParenMatch = RegExp(
+          r'@MappableClass\b',
+        ).firstMatch(classContent);
+        if (noParenMatch != null) {
+          mappableAnnotation = '@MappableClass()';
+        }
+      }
+    }
+
     // Extract fields to determine which are primary types
     final fields = _extractFields(classContent);
 
-    // Construct Entity name
-    final entityName = className.endsWith('Entity')
-        ? className
-        : '${className}Entity';
+    // Create a map of original field names to camelCase field names
+    final fieldNameMap = <String, String>{};
+    fields.forEach((originalName, type) {
+      final camelCaseName = ReCase(originalName).camelCase;
+      fieldNameMap[originalName] = camelCaseName;
+    });
+
+    // Construct Entity name - remove "Model" suffix if present before appending "Entity"
+    String baseName = className;
+    if (baseName.endsWith('Model')) {
+      baseName = baseName.substring(0, baseName.length - 5); // Remove "Model"
+    }
+    final entityName = baseName.endsWith('Entity')
+        ? baseName
+        : '${baseName}Entity';
 
     // Create Entity class version (keep all fields)
     var entityClass = classContent
         // Remove annotation (supports multi-line)
         .replaceFirst(RegExp(r'@MappableClass[\s\S]*?(?=class)'), '')
-        // Replace entire class declaration line properly
+        // Replace entire class declaration line properly (do this first)
         .replaceFirstMapped(
-          RegExp(r'class\s+' + className + r'(?:\s+[^{]*)?\{'),
+          RegExp(r'class\s+' + RegExp.escape(className) + r'(?:\s+[^{]*)?\{'),
           (m) => 'class $entityName {',
         )
         // Remove with clauses
         .replaceAll(RegExp(r'with\s+\w+'), '')
-        // Fix constructor name to match entity name
+        // Fix constructor name to match entity name (do this second)
         .replaceAllMapped(
-          RegExp(r'const\s+' + className + r'\('),
+          RegExp(r'const\s+' + RegExp.escape(className) + r'\('),
           (m) => 'const $entityName(',
         )
+        // Replace remaining type references to original class name with entity name
+        // This handles: final ClassName field; List<ClassName> field; etc.
+        // Since we already replaced class/constructor, remaining instances are type references
+        .replaceAll(
+          RegExp(r'\b' + RegExp.escape(className) + r'\b'),
+          entityName,
+        )
         .trim();
+
+    // Replace field names to camelCase - replace all occurrences of original field names
+    // This handles field declarations, constructor parameters (this.field, super.field), etc.
+    // Process in reverse order by length to avoid partial matches
+    final sortedFieldNames = fieldNameMap.keys.toList()
+      ..sort((a, b) => b.length.compareTo(a.length));
+    for (final originalName in sortedFieldNames) {
+      final camelCaseName = fieldNameMap[originalName]!;
+      if (originalName != camelCaseName) {
+        // Replace field name only where it appears as a standalone identifier
+        // This avoids replacing parts of other names
+        entityClass = entityClass.replaceAll(
+          RegExp(r'\b' + RegExp.escape(originalName) + r'\b'),
+          camelCaseName,
+        );
+      }
+    }
 
     entityBuffer.writeln('// ENTITY CLASS GENERATED FROM $className');
     entityBuffer.writeln(entityClass);
@@ -218,14 +294,22 @@ Map<String, String> convertModelToEntity(String modelCode) {
     // Create Model class that extends Entity
     final mixinPart = mixin != null ? ' with $mixin' : '';
 
-    // Start building model class
-    modelBuffer.writeln('@MappableClass()');
+    // Start building model class with preserved annotation parameters
+    modelBuffer.writeln(mappableAnnotation);
     modelBuffer.writeln('class $className extends $entityName$mixinPart {');
 
     // Add only non-primary type fields
-    fields.forEach((name, type) {
+    fields.forEach((originalName, type) {
       if (!_isPrimaryType(type)) {
-        modelBuffer.writeln('  final $type $name;');
+        // Replace type references to original class name with entity name
+        final updatedType = type.replaceAll(
+          RegExp(r'\b' + RegExp.escape(className) + r'\b'),
+          entityName,
+        );
+        // Use camelCase field name
+        final camelCaseName =
+            fieldNameMap[originalName] ?? ReCase(originalName).camelCase;
+        modelBuffer.writeln('  final $updatedType $camelCaseName;');
       }
     });
 
@@ -234,14 +318,23 @@ Map<String, String> convertModelToEntity(String modelCode) {
     modelBuffer.writeln('  const $className({');
 
     // Add constructor parameters
-    fields.forEach((name, type) {
+    fields.forEach((originalName, type) {
+      // Replace type references to original class name with entity name (for display)
+      final updatedType = type.replaceAll(
+        RegExp(r'\b' + RegExp.escape(className) + r'\b'),
+        entityName,
+      );
+      // Use camelCase field name
+      final camelCaseName =
+          fieldNameMap[originalName] ?? ReCase(originalName).camelCase;
+      // Check original type to decide super vs this (primary types go to entity/super)
       if (_isPrimaryType(type)) {
         // Use super. for primary types (no 'required' prefix needed)
-        modelBuffer.writeln('    super.$name,');
+        modelBuffer.writeln('    super.$camelCaseName,');
       } else {
         // Use this. for non-primary types (with 'required' if not nullable)
-        final requiredPart = type.endsWith('?') ? '' : 'required ';
-        modelBuffer.writeln('    ${requiredPart}this.$name,');
+        final requiredPart = updatedType.endsWith('?') ? '' : 'required ';
+        modelBuffer.writeln('    ${requiredPart}this.$camelCaseName,');
       }
     });
 
