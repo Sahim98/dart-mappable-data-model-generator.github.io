@@ -54,7 +54,7 @@ class _TopPanelState extends ConsumerState<TopPanel> {
   @override
   Widget build(BuildContext context) {
     final model = ref.watch(modelProvider);
-    final notifier = ref.read(modelProvider.notifier);
+    final modelData = ref.read(modelProvider.notifier);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -69,7 +69,7 @@ class _TopPanelState extends ConsumerState<TopPanel> {
               model.mode == ConversionMode.modelToEntity,
             ],
             onPressed: (index) {
-              notifier.setMode(
+              modelData.setMode(
                 index == 0
                     ? ConversionMode.jsonToModel
                     : ConversionMode.modelToEntity,
@@ -88,7 +88,7 @@ class _TopPanelState extends ConsumerState<TopPanel> {
           ),
           const SizedBox(height: 12),
           if (model.mode == ConversionMode.jsonToModel)
-            _buildJsonOptions(ref, model, notifier)
+            _buildJsonOptions(ref, model, modelData)
           else
             const Padding(
               padding: EdgeInsets.only(top: 8),
@@ -104,7 +104,7 @@ class _TopPanelState extends ConsumerState<TopPanel> {
   Widget _buildJsonOptions(
     WidgetRef ref,
     ModelConfig model,
-    ModelNotifier notifier,
+    ModelNotifier modelData,
   ) {
     return Wrap(
       spacing: 24,
@@ -125,7 +125,7 @@ class _TopPanelState extends ConsumerState<TopPanel> {
             Switch(
               value: model.options.ignoreNull,
               onChanged: (v) =>
-                  notifier.setOptions(model.options.copyWith(ignoreNull: v)),
+                  modelData.setOptions(model.options.copyWith(ignoreNull: v)),
             ),
           ],
         ),
@@ -145,7 +145,7 @@ class _TopPanelState extends ConsumerState<TopPanel> {
                 } else {
                   methods.remove('encode');
                 }
-                notifier.setOptions(
+                modelData.setOptions(
                   model.options.copyWith(generateMethods: methods),
                 );
               },
@@ -167,7 +167,7 @@ class _TopPanelState extends ConsumerState<TopPanel> {
                 } else {
                   methods.remove('decode');
                 }
-                notifier.setOptions(
+                modelData.setOptions(
                   model.options.copyWith(generateMethods: methods),
                 );
               },
