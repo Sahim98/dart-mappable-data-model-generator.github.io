@@ -4,7 +4,9 @@ import 'package:recase/recase.dart';
 import 'package:dart_style/dart_style.dart';
 import '../models/mappable_options.dart';
 
-final _formatter = DartFormatter();
+final _formatter = DartFormatter(
+  languageVersion: DartFormatter.latestLanguageVersion,
+);
 
 /// Generate Dart classes recursively from JSON map
 String generateClassFromJson(
@@ -31,14 +33,14 @@ String generateClassFromJson(
       if (value == null) {
         fieldType = 'dynamic';
       } else if (value is Map<String, dynamic>) {
-        final nestedName = ReCase(key).pascalCase;
+        final nestedName = _normalizeNonPrimaryTypeName(key);
         nested[nestedName] = value;
         fieldType = nestedName;
       } else if (value is List) {
         if (value.isEmpty) {
           fieldType = 'List<dynamic>';
         } else if (value.first is Map<String, dynamic>) {
-          final nestedName = ReCase(key).pascalCase;
+          final nestedName = _normalizeNonPrimaryTypeName(key);
           nested[nestedName] = value.first;
           fieldType = 'List<$nestedName>';
         } else {
@@ -98,7 +100,7 @@ String _buildMappableAnnotation(MappableOptions o) {
   if (o.caseStyle.isNotEmpty) params.add('caseStyle: CaseStyle.${o.caseStyle}');
   if (o.generateMethods.isNotEmpty) {
     final methods = o.generateMethods
-        .map((m) => 'GenerateMethods.${_capitalize(m)}')
+        .map((m) => 'GenerateMethods.${m.toLowerCase()}')
         .join(' | ');
     params.add('generateMethods: $methods');
   }
@@ -106,10 +108,23 @@ String _buildMappableAnnotation(MappableOptions o) {
   return '@MappableClass(${params.join(', ')})';
 }
 
-/// Capitalize first letter of a string
-String _capitalize(String s) {
-  if (s.isEmpty) return s;
-  return s[0].toUpperCase() + s.substring(1);
+/// Normalize non-primary type names to keep Entity/Model suffixes
+String _normalizeNonPrimaryTypeName(String key) {
+  final pascal = ReCase(key).pascalCase;
+  final lower = pascal.toLowerCase();
+
+  if (lower.endsWith('entity')) {
+    final base = pascal.substring(0, pascal.length - 'Entity'.length);
+    return '${ReCase(base).pascalCase}Entity';
+  }
+
+  if (lower.endsWith('model')) {
+    final base = pascal.substring(0, pascal.length - 'Model'.length);
+    return '${ReCase(base).pascalCase}Model';
+  }
+
+  // Default to Entity for non-primary inferred nested types
+  return '${pascal}Entity';
 }
 
 /// Infer Dart type for primitives
@@ -149,6 +164,49 @@ Map<String, String> _extractFields(String classContent) {
   return fields;
 }
 
+/// Convert Model type name to Entity type name for non-primary attributes
+String _convertTypeToEntity(String type) {
+  // Handle List<Type> or List<Type>?
+  final listMatch = RegExp(r'^List<(.+)>(.*)$').firstMatch(type);
+  if (listMatch != null) {
+    final innerType = listMatch.group(1)!;
+    final suffix = listMatch.group(2)!; // ? or empty
+    final convertedInner = _convertSingleTypeToEntity(innerType);
+    return 'List<$convertedInner>$suffix';
+  }
+
+  return _convertSingleTypeToEntity(type);
+}
+
+/// Convert a single type name (Model -> Entity)
+String _convertSingleTypeToEntity(String type) {
+  // Extract nullable suffix if present
+  final isNullable = type.endsWith('?');
+  final baseType = isNullable ? type.substring(0, type.length - 1) : type;
+
+  // Check if it's a primary type - don't convert
+  if (_isPrimaryType(baseType)) {
+    return type;
+  }
+
+  // If ends with Model, replace with Entity
+  if (baseType.endsWith('Model')) {
+    final baseName = baseType.substring(
+      0,
+      baseType.length - 5,
+    ); // Remove 'Model'
+    return '${baseName}Entity${isNullable ? '?' : ''}';
+  }
+
+  // If doesn't end with Entity or Model, add Entity
+  if (!baseType.endsWith('Entity')) {
+    return '${baseType}Entity${isNullable ? '?' : ''}';
+  }
+
+  // Already ends with Entity
+  return type;
+}
+
 Map<String, String> convertModelToEntity(String modelCode) {
   log("modelCode: $modelCode");
   // Handle empty or whitespace-only input
@@ -158,7 +216,9 @@ Map<String, String> convertModelToEntity(String modelCode) {
 
   final entityBuffer = StringBuffer();
   final modelBuffer = StringBuffer();
-  final formatter = DartFormatter();
+  final formatter = DartFormatter(
+    languageVersion: DartFormatter.latestLanguageVersion,
+  );
 
   // Match @MappableClass and class declaration (supports multi-line annotations)
   final classRegex = RegExp(
@@ -270,13 +330,30 @@ Map<String, String> convertModelToEntity(String modelCode) {
         )
         .trim();
 
-    // Replace field names to camelCase - replace all occurrences of original field names
-    // This handles field declarations, constructor parameters (this.field, super.field), etc.
+    // Convert non-primary types to Entity types and replace field names to camelCase
     // Process in reverse order by length to avoid partial matches
     final sortedFieldNames = fieldNameMap.keys.toList()
       ..sort((a, b) => b.length.compareTo(a.length));
     for (final originalName in sortedFieldNames) {
+      final originalType = fields[originalName]!;
       final camelCaseName = fieldNameMap[originalName]!;
+
+      // Convert non-primary types to Entity
+      if (!_isPrimaryType(originalType)) {
+        final entityType = _convertTypeToEntity(originalType);
+        // Replace: final OriginalType originalName; -> final EntityType camelCaseName;
+        entityClass = entityClass.replaceAll(
+          RegExp(
+            r'final\s+' +
+                RegExp.escape(originalType) +
+                r'\s+' +
+                RegExp.escape(originalName) +
+                r'\s*;',
+          ),
+          'final $entityType $camelCaseName;',
+        );
+      }
+
       if (originalName != camelCaseName) {
         // Replace field name only where it appears as a standalone identifier
         // This avoids replacing parts of other names
