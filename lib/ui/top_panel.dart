@@ -174,6 +174,44 @@ class _TopPanelState extends ConsumerState<TopPanel> {
             ),
           ],
         ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Case Style: '),
+            const SizedBox(width: 8),
+            DropdownButton<String>(
+              value: model.options.caseStyle.isEmpty
+                  ? 'camelCase'
+                  : model.options.caseStyle,
+              items: const [
+                DropdownMenuItem(value: 'camelCase', child: Text('camelCase')),
+                DropdownMenuItem(
+                  value: 'PascalCase',
+                  child: Text('PascalCase'),
+                ),
+                DropdownMenuItem(
+                  value: 'snake_case',
+                  child: Text('snake_case'),
+                ),
+                DropdownMenuItem(
+                  value: 'SCREAMING_SNAKE_CASE',
+                  child: Text('SCREAMING_SNAKE_CASE'),
+                ),
+                DropdownMenuItem(
+                  value: 'kebab-case',
+                  child: Text('kebab-case'),
+                ),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  modelData.setOptions(
+                    model.options.copyWith(caseStyle: value),
+                  );
+                }
+              },
+            ),
+          ],
+        ),
       ],
     );
   }
